@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: "Set release version"
         id: release
-        run: echo "::set-output name=version::1.0.0-${GITHUB_SHA:5}"
+        run: echo "::set-output name=version::1.0.0-${GITHUB_SHA:0:5}"
       - uses: actions/checkout@v3.1.0
 
       - name: "Set up JDK"
