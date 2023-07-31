@@ -54,4 +54,4 @@ jobs:
           generate_release_notes: true
           target_commitish: ${{ github.ref }}
         env:
-          GITHUB_TOKEN: ${{ secrets.QAMETA_CI }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
