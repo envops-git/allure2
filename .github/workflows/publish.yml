@@ -9,8 +9,8 @@ jobs:
     steps:
       - name: "Set release version"
         id: release
-        run: echo "::set-output name=version::1.0.0-${GITHUB_SHA:5}"
-      - uses: actions/checkout@v3.1.0
+        run: echo "::set-output name=version::${GITHUB_REF:10}"
+      - uses: actions/checkout@v3.5.3
 
       - name: "Set up JDK"
         uses: actions/setup-java@v3
@@ -25,26 +25,56 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: "Gradle Build"
-        run: ./gradlew build buildRpm buildDeb -Pversion=${{ steps.release.outputs.version }}
-  
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+        run: ./gradlew build buildRpm buildDeb -Pversion=2.0.0
+
+      - name: "Gradle Publish"
+        run: |
+          ./gradlew publishToSonatype -Pversion=${{ steps.release.outputs.version }} \
+                    -Psigning.keyId=${GPG_KEY_ID} \
+                    -Psigning.password=${GPG_PASSPHRASE} \
+                    -Psigning.secretKeyRingFile=${GITHUB_WORKSPACE}/${GPG_KEY_ID}.gpg
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.OSSRH_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.OSSRH_PASSWORD }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: "Publish Deb to GitHub"
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.release.outputs.version }}
-          release_name: Release ${{ steps.release.outputs.version }}
-          draft: false
-          prerelease: false
-          
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./allure-commandline/build/distributions/allure_${{ steps.release.outputs.version }}-1_all.deb
+          asset_name: allure_${{ steps.release.outputs.version }}-1_all.deb
+          asset_content_type: application/octet-stream
+
+      - name: "Publish Rpm to GitHub"
+        uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./allure-commandline/build/distributions/allure-${{ steps.release.outputs.version }}-1.noarch.rpm
+          asset_name: allure_${{ steps.release.outputs.version }}-1.noarch.rpm
+          asset_content_type: application/octet-stream
+
+      - name: "Publish Zip to GitHub"
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./allure-commandline/build/distributions/allure-commandline-${{ steps.release.outputs.version }}.zip
           asset_name: allure-${{ steps.release.outputs.version }}.zip
+          asset_content_type: application/octet-stream
+
+      - name: "Publish Tgz to GitHub"
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./allure-commandline/build/distributions/allure-commandline-${{ steps.release.outputs.version }}.tgz
+          asset_name: allure-${{ steps.release.outputs.version }}.tgz
           asset_content_type: application/octet-stream
