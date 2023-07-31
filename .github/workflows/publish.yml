@@ -26,6 +26,9 @@ jobs:
 
       - name: "Gradle Build"
         run: ./gradlew build buildRpm buildDeb
+        
+      - name: "Gradle Build"
+        run: ls -ltr ./allure-commandline/build/distributions
   
       - name: Create Release
         id: create_release
