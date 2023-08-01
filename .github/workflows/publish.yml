@@ -2,6 +2,10 @@ name: Publish
 
 on:
   workflow_dispatch:
+    inputs:
+      releaseVersion:
+        description: "The release version in <MAJOR>.<MINOR>.<PATCH> format"
+        required: true
 
 jobs:
   build:
@@ -9,7 +13,7 @@ jobs:
     steps:
       - name: "Set release version"
         id: release
-        run: echo "::set-output name=version::2.24.0-${GITHUB_SHA:0:5}"
+        run: echo "::set-output name=version::${{ github.event.inputs.releaseVersion }}-${GITHUB_SHA:0:5}"
       - uses: actions/checkout@v3.1.0
 
       - name: "Set up JDK"
@@ -25,7 +29,7 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: "Gradle Build"
-        run: ./gradlew build buildRpm buildDeb -Pversion=2.24.0
+        run: ./gradlew build buildRpm buildDeb -Pversion=${{ github.event.inputs.releaseVersion }}
         
       - name: "Gradle Build"
         run: ls -ltr ./allure-commandline/build/distributions
@@ -48,6 +52,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./allure-commandline/build/distributions/allure-commandline-2.24.0.zip
+          asset_path: ./allure-commandline/build/distributions/allure-commandline-${{ github.event.inputs.releaseVersion }}.zip
           asset_name: allure-${{ steps.release.outputs.version }}.zip
           asset_content_type: application/octet-stream
